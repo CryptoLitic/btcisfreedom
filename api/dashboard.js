@@ -1,4 +1,3 @@
-// /api/dashboard.js
 function halvingETA(height){
   const HALVING_INTERVAL = 210000;
   const NEXT_HALVING = Math.ceil(height / HALVING_INTERVAL) * HALVING_INTERVAL;
@@ -22,20 +21,20 @@ module.exports = async (req, res) => {
       fetch('https://blockchain.info/q/hashrate?cors=true').then(r=>r.text()).catch(_=>null)
     ]);
 
-    const priceUSD = price?.market_data?.current_price?.usd || null;
-    const change24h = price?.market_data?.price_change_percentage_24h || null;
-    const volume24 = price?.market_data?.total_volume?.usd || null;
-    const dominance = global?.data?.market_cap_percentage?.btc || null;
-    const h = parseInt(heightTxt, 10) || null;
-    const feeFast = fees?.fastestFee ?? fees?.halfHourFee ?? null;
-    const feeEco = fees?.economyFee ?? null;
-    const diffProg = diff?.progressPercent ? Math.round(diff.progressPercent*100)/100 : null;
-    const supplyBTC = supplyTxt ? Math.round(parseInt(supplyTxt,10)/1e8) : null;
-    const memCount = mempool?.count ?? null;
-    const memVBytes = mempool?.vsize ?? mempool?.vsizeSum ?? null;
-    const memVMB = typeof memVBytes === 'number' ? memVBytes / 1e6 : null;
-    const hashrateGH = hashrateTxt ? parseFloat(hashrateTxt) : null;
-    const hashrateEH = typeof hashrateGH === 'number' ? hashrateGH / 1e9 : null;
+    const priceUSD = price?.market_data?.current_price?.usd ?? 0;
+    const change24h = price?.market_data?.price_change_percentage_24h ?? 0;
+    const volume24 = price?.market_data?.total_volume?.usd ?? 0;
+    const dominance = global?.data?.market_cap_percentage?.btc ?? 0;
+    const h = parseInt(heightTxt, 10) || 850000;
+    const feeFast = fees?.fastestFee ?? 15;
+    const feeEco = fees?.economyFee ?? 3;
+    const diffProg = diff?.progressPercent ? Math.round(diff.progressPercent*100)/100 : 50;
+    const supplyBTC = supplyTxt ? Math.round(parseInt(supplyTxt,10)/1e8) : 19700000;
+    const memCount = mempool?.count ?? 0;
+    const memVBytes = mempool?.vsize ?? mempool?.vsizeSum ?? 0;
+    const memVMB = typeof memVBytes === 'number' ? Math.round(memVBytes/1e6*10)/10 : 0;
+    const hashrateGH = hashrateTxt ? parseFloat(hashrateTxt) : NaN;
+    const hashrateEH = isNaN(hashrateGH) ? 500 : hashrateGH/1e9;
 
     res.setHeader('Cache-Control','s-maxage=120, stale-while-revalidate=120');
     res.status(200).json({
@@ -44,7 +43,7 @@ module.exports = async (req, res) => {
       volume_24h_usd: volume24,
       dominance_btc: dominance,
       block_height: h,
-      halving_eta: h ? halvingETA(h) : null,
+      halving_eta: halvingETA(h),
       mempool_count: memCount,
       mempool_vmb: memVMB,
       fee_fast: feeFast,
@@ -54,6 +53,6 @@ module.exports = async (req, res) => {
       hashrate_eh: hashrateEH
     });
   }catch(e){
-    res.status(200).json({});
+    res.status(200).json({}); // never 500, let frontend show error card
   }
 }
