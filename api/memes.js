@@ -1,4 +1,3 @@
-// /api/memes.js
 module.exports = async (req, res) => {
   try{
     const subs = ['BitcoinMemes', 'Bitcoin', 'CryptoCurrencyMemes'];
@@ -11,12 +10,18 @@ module.exports = async (req, res) => {
           const post = p.data;
           if (post.over_18) return;
           let image = null;
-          if (post.preview && post.preview.images && post.preview.images[0]) {
+          if (post.preview?.images?.[0]?.source?.url) {
             image = post.preview.images[0].source.url.replace(/&amp;/g,'&');
           }
           items.push({ title: post.title, url: 'https://reddit.com'+post.permalink, image });
         });
       } catch(e){}
+    }
+    if (!items.length) {
+      return res.status(200).json({ items: [
+        { title: 'HODL vibes', url: 'https://reddit.com/r/BitcoinMemes/', image: null },
+        { title: '1 BTC = 1 BTC', url: 'https://reddit.com/r/Bitcoin/', image: null }
+      ]});
     }
     res.setHeader('Cache-Control','s-maxage=600, stale-while-revalidate=600');
     res.status(200).json({ items });
