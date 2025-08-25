@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
           const content = it.contentSnippet||it.content||'';
           const pub = it.pubDate || it.isoDate || null;
           const score = scoreText(`${title} ${content}`);
-          items.push({ title, url: it.link||it.guid||'#', source: (feed.title||'').replace(/\s+RSS.*$/i,''), pubDate: pub, score });
+          items.push({ title, url: it.link||it.guid||'#', source: (feed.title||'').replace(/\s+RSS.*$/i,''), pubDate: pub, score, contentSnippet: content });
         })
       }catch(e){}
     }

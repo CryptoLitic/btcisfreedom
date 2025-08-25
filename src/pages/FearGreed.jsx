@@ -20,17 +20,28 @@ export default function FearGreed() {
   if(loading) return <div className="card"><h2>Loading…</h2></div>
   if(!data) return <div className="card"><h2>Error</h2><p className="muted">Could not load fear & greed.</p></div>
 
+  const tiles = [
+    { k:'Alternative.me (Crypto F&G)', v: data.alt_fng ?? '—' },
+    { k:'Funding-based Score', v: data.funding_score ?? '—' },
+    { k:'30d Volatility Score', v: data.vol_score ?? '—' },
+    { k:'Site AI Sentiment', v: data.ai_sentiment ?? '—' },
+    { k:'Median', v: data.median ?? '—' },
+    { k:'Status', v: data.label ?? '—' },
+  ]
+
   return (
     <div className="row">
       <section className="card">
-        <h2>Fear & Greed Indices</h2>
-        <div className="summary">
-          <div className="stat"><div className="caption">Alternative.me</div><div className="value">{data.alt_fng} / 100</div></div>
-          <div className="stat"><div className="caption">AI Sentiment (site)</div><div className="value">{data.ai_sentiment} / 100</div></div>
-          <div className="stat"><div className="caption">Median</div><div className="value">{data.median} / 100</div></div>
-          <div className="stat"><div className="caption">Status</div><div className="value">{data.label}</div></div>
+        <h2>Fear & Greed — Composite</h2>
+        <div className="tiles">
+          {tiles.map((t,i)=>(
+            <div className="tile" key={i}>
+              <div className="k">{t.k}</div>
+              <div className="v">{t.v}</div>
+            </div>
+          ))}
         </div>
-        <p className="muted" style={{marginTop:8}}>Median combines public index and our site’s AI-derived score.</p>
+        <p className="muted" style={{marginTop:8}}>Composite median of public indices and derived metrics (funding rate, 30d volatility) plus our site’s AI sentiment.</p>
       </section>
     </div>
   )

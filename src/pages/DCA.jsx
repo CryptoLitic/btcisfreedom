@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Area } from 'recharts'
 
+useEffect(()=>{ document.title = 'BTC is Freedom — DCA & Analysis' }, [])
+
 const fmtUSD = (n) => (n ?? 0).toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 })
 const fmtPct = (n) => `${n > 0 ? '+' : ''}${n.toFixed(2)}%`
 const daysBetween = (a, b) => Math.ceil((b - a) / (1000 * 60 * 60 * 24))

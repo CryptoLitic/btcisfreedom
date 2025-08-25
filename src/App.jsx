@@ -1,5 +1,5 @@
-import React from 'react'
-import { NavLink, Routes, Route } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { NavLink, Routes, Route, useLocation } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
 import { RefreshCw } from 'lucide-react'
 import Dashboard from './pages/Dashboard.jsx'
@@ -12,9 +12,19 @@ const Tab = ({to, label}) => (
   <NavLink to={to} className={({isActive}) => 'tab' + (isActive ? ' active' : '')}>{label}</NavLink>
 )
 
+function TitleSync(){
+  const { pathname } = useLocation()
+  useEffect(()=>{
+    const map = { '/':'Dashboard', '/news':'News', '/dca':'DCA & Analysis', '/fear-greed':'Fear & Greed', '/memes':'Memes' }
+    document.title = `BTC is Freedom — ${map[pathname] || 'Dashboard'}`
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   return (
     <MotionConfig reducedMotion="user">
+      <TitleSync/>
       <header>
         <div className="container" style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
           <div className="brand">
