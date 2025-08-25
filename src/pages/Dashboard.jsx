@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-function TradingView() {
+function TradingView() { return <div className='card'><h2>Price Chart</h2><p className='muted'>TradingView temporarily disabled for reliability. We can re-enable once site is stable.</p></div> }
   useEffect(() => {
     const script = document.createElement('script')
     script.src = 'https://s3.tradingview.com/tv.js'
