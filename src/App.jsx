@@ -1,22 +1,10 @@
 import React, { useEffect } from 'react';
 import { NavLink, Routes, Route, useLocation } from 'react-router-dom';
-
-// --- Minimal fallback pages so the shell always renders ---
-function FallbackPage({ title }) {
-  return (
-    <div className="card">
-      <h2>{title}</h2>
-      <p className="muted">This is a fallback page (shell loaded successfully).</p>
-    </div>
-  );
-}
-
-// Lazy import pages, but keep fallbacks ready
-const Dashboard = React.lazy(() => import('./pages/Dashboard.jsx'));
-const News = React.lazy(() => import('./pages/News.jsx'));
-const DCA = React.lazy(() => import('./pages/DCA.jsx'));
-const FearGreed = React.lazy(() => import('./pages/FearGreed.jsx'));
-const Memes = React.lazy(() => import('./pages/Memes.jsx'));
+import Dashboard from './pages/Dashboard.jsx';
+import News from './pages/News.jsx';
+import DCA from './pages/DCA.jsx';
+import FearGreed from './pages/FearGreed.jsx';
+import Memes from './pages/Memes.jsx';
 
 const Tab = ({to, label}) => (
   <NavLink to={to} className={({isActive}) => 'tab' + (isActive ? ' active' : '')}>{label}</NavLink>
@@ -31,11 +19,10 @@ function TitleSync(){
   return null;
 }
 
-// Error boundary to show runtime errors on-screen
+// Simple error boundary so the app never whitescreens
 class ErrorBoundary extends React.Component {
   constructor(props){ super(props); this.state = { error: null }; }
   static getDerivedStateFromError(error){ return { error }; }
-  componentDidCatch(error, info){ /* no-op */ }
   render(){
     if (this.state.error) {
       return (
@@ -74,19 +61,16 @@ export default function App() {
 
       <main className="container" style={{paddingTop:16}}>
         <div className="muted" style={{margin:'8px 0', fontSize:12}}>
-          Healthcheck: If you can read this, the app shell loaded. If a page fails, you’ll see an error box instead of a blank screen.
+          Healthcheck: App shell loaded.
         </div>
-
-        <React.Suspense fallback={<FallbackPage title="Loading…" />}>
-          <Routes>
-            <Route path="/" element={<Dashboard/>}/>
-            <Route path="/news" element={<News/>}/>
-            <Route path="/dca" element={<DCA/>}/>
-            <Route path="/fear-greed" element={<FearGreed/>}/>
-            <Route path="/memes" element={<Memes/>}/>
-            <Route path="*" element={<FallbackPage title="Not Found" />}/>
-          </Routes>
-        </React.Suspense>
+        <Routes>
+          <Route path="/" element={<Dashboard/>}/>
+          <Route path="/news" element={<News/>}/>
+          <Route path="/dca" element={<DCA/>}/>
+          <Route path="/fear-greed" element={<FearGreed/>}/>
+          <Route path="/memes" element={<Memes/>}/>
+          <Route path="*" element={<div className="card"><h2>Not Found</h2></div>}/>
+        </Routes>
       </main>
     </ErrorBoundary>
   );
