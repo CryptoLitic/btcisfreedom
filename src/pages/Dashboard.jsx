@@ -3,7 +3,7 @@ import LineChart from '../components/LineChart.jsx';
 import TradingViewWidget from '../components/TradingViewWidget.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 
-function fmt(n) { return typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString() : '—'; }
+function fmt(n){ return typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString() : '—'; }
 
 function sma(arr, n){
   const out = []; let sum=0;
@@ -25,39 +25,41 @@ function goldenRatioBands(price){
   return fibs.map((f)=> ma350.map(p=>({ time:p.time, value: p.value * f })));
 }
 function blocksToNextHalving(height){
-  const NEXT = Math.ceil(height / 210000) * 210000;
+  const NEXT = Math.ceil((height||0) / 210000) * 210000;
   return Math.max(0, NEXT - (height||0));
 }
 
-export default function Dashboard() {
-  const [priceData, setPriceData] = useState([]);      // [{time, value}]
-  const [spot, setSpot] = useState({ price: 0, change24: 0 });
+export default function Dashboard(){
+  const [priceData, setPriceData] = useState([]);
+  const [spot, setSpot] = useState({ price: 0, change24: 0, dominance: 0 });
   const [network, setNetwork] = useState({ height: 0, mempoolCount: 0, vmb: 0, diffProgress: 50 });
   const [active, setActive] = useState('btc_price');
   const [loading, setLoading] = useState(true);
 
-  // Price history & spot from CoinGecko
-  useEffect(() => {
-    (async () => {
-      try {
-        const [hist, spotResp] = await Promise.all([
+  // Price history + spot + dominance
+  useEffect(()=> {
+    (async ()=>{
+      try{
+        const [hist, spotResp, global] = await Promise.all([
           fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1825&interval=daily').then(r=>r.json()),
           fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false').then(r=>r.json()),
+          fetch('https://api.coingecko.com/api/v3/global').then(r=>r.json())
         ]);
         const arr = Array.isArray(hist?.prices) ? hist.prices.map(p => ({ time: Math.floor(p[0]/1000), value: p[1] })) : [];
         setPriceData(arr);
         setSpot({
           price: spotResp?.market_data?.current_price?.usd ?? 0,
-          change24: spotResp?.market_data?.price_change_percentage_24h ?? 0
+          change24: spotResp?.market_data?.price_change_percentage_24h ?? 0,
+          dominance: global?.data?.market_cap_percentage?.btc ?? 0
         });
-      } catch (e) {}
+      }catch(e){}
     })();
-  }, []);
+  },[]);
 
-  // Mempool + height + diff
-  useEffect(() => {
-    (async () => {
-      try {
+  // Network & mempool
+  useEffect(()=>{
+    (async ()=>{
+      try{
         const [heightTxt, mempool, diff] = await Promise.all([
           fetch('https://mempool.space/api/blocks/tip/height').then(r=>r.text()),
           fetch('https://mempool.space/api/mempool').then(r=>r.json()),
@@ -65,23 +67,23 @@ export default function Dashboard() {
         ]);
         const height = parseInt(heightTxt,10) || 0;
         const vmb = typeof mempool?.vsize === 'number' ? Math.round(mempool.vsize/1e6*10)/10
-                : (mempool?.vsizeSum ? Math.round(mempool.vsizeSum/1e6*10)/10 : 0);
+              : (mempool?.vsizeSum ? Math.round(mempool.vsizeSum/1e6*10)/10 : 0);
         setNetwork({
           height,
           mempoolCount: mempool?.count ?? 0,
           vmb,
           diffProgress: diff?.progressPercent ? Math.round(diff.progressPercent*100)/100 : 50
         });
-      } catch (e) {}
+      }catch(e){}
       setLoading(false);
     })();
-  }, []);
+  },[]);
 
-  const overlays = useMemo(() => {
-    if (!priceData.length) return {};
+  const overlays = useMemo(()=>{
+    if(!priceData.length) return {};
     const ma50  = sma(priceData, 50);
     const ma200 = sma(priceData, 200);
-    const mayer = priceData.slice(199).map((p, i) => ({ time: p.time, value: p.value / ma200[i].value }));
+    const mayer = priceData.slice(199).map((p,i)=>({ time:p.time, value: p.value / ma200[i].value }));
     const pc = piCycle(priceData);
     const grm = goldenRatioBands(priceData);
     return { ma50, ma200, mayer, ma111: pc.ma111, ma350x2: pc.ma350x2, grm };
@@ -89,10 +91,11 @@ export default function Dashboard() {
 
   const LEFT_MENU = [
     {id:'btc_price', label:'BTC Price (MA50/200)'},
-    {id:'mayer', label:'Mayer Multiple'},
-    {id:'pi', label:'Pi Cycle (111D & 350D×2)'},
-    {id:'grm', label:'Golden Ratio Multiplier'},
-    {id:'pro', label:'Pro Chart (TradingView)'}
+    {id:'mayer',    label:'Mayer Multiple'},
+    {id:'pi',       label:'Pi Cycle (111D & 350D×2)'},
+    {id:'grm',      label:'Golden Ratio Multiplier'},
+    {id:'pro',      label:'Pro Chart (TradingView)'},
+    {id:'dom',      label:'BTC Dominance'}
   ];
 
   const blocksRemaining = blocksToNextHalving(network.height);
@@ -110,6 +113,13 @@ export default function Dashboard() {
       return <LineChart series={priceData} overlays={ovs} />;
     } else if (active === 'pro') {
       return <TradingViewWidget />;
+    } else if (active === 'dom') {
+      return (
+        <div className="card">
+          <h3>BTC Dominance</h3>
+          <div className="v">{typeof spot.dominance==='number' ? spot.dominance.toFixed(1) + '%' : '—'}</div>
+        </div>
+      );
     }
     return null;
   })();
@@ -122,11 +132,7 @@ export default function Dashboard() {
         <h3>Analytics</h3>
         <div className="menu">
           {LEFT_MENU.map(x => (
-            <button
-              key={x.id}
-              onClick={() => setActive(x.id)}
-              className={active===x.id ? 'active' : ''}
-            >
+            <button key={x.id} onClick={()=>setActive(x.id)} className={active===x.id?'active':''}>
               {x.label}
             </button>
           ))}
