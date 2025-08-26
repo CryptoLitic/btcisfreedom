@@ -1,47 +1,51 @@
 import React from "react";
 import { Routes, Route, NavLink } from "react-router-dom";
 import Dashboard from "./pages/Dashboard.jsx";
-import News from "./pages/News.jsx";
-import DCA from "./pages/DCA.jsx";
-import FearGreed from "./pages/FearGreed.jsx";
 
-const Tab = ({ to, label }) => (
-  <NavLink to={to} className={({ isActive }) => "tab" + (isActive ? " active" : "")}>
-    {label}
-  </NavLink>
-);
+function Tab({ to, children }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+      end
+    >
+      {children}
+    </NavLink>
+  );
+}
 
 export default function App() {
   return (
-    <div>
+    <>
       <header>
-        <div className="container topbar">
-          <div className="brand">
-            <img src="/assets/btcisfreedom-header.jpg" className="brand-logo" alt="BTC is Freedom logo" />
-            <h1>BTC is Freedom</h1>
-            <span className="badge">self-hosted • privacy-first</span>
+        <div className="container">
+          <div className="topbar">
+            <div className="brand">
+              <img className="brand-logo" src="/assets/watermark.png" alt="BTC is Freedom" />
+              <h1>BTC is Freedom</h1>
+              <span className="badge">Dashboard</span>
+            </div>
           </div>
-          <button className="btn subtle" onClick={()=>location.reload()}>Refresh</button>
-        </div>
-        <div className="container tabs">
-          <nav>
-            <Tab to="/" label="Dashboard" />
-            <Tab to="/news" label="News" />
-            <Tab to="/dca" label="DCA & Analysis" />
-            <Tab to="/fear-greed" label="Fear & Greed" />
-          </nav>
+          <div className="tabs">
+            <nav>
+              <Tab to="/">Dashboard</Tab>
+              <Tab to="/news">News</Tab>
+              <Tab to="/dca">DCA & Analysis</Tab>
+              <Tab to="/sentiment">Fear &amp; Greed</Tab>
+            </nav>
+          </div>
         </div>
       </header>
 
       <main className="container content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/dca" element={<DCA />} />
-          <Route path="/fear-greed" element={<FearGreed />} />
+          <Route path="/news" element={<div className="card"><h2>News</h2><p>Latest Bitcoin news will appear here.</p></div>} />
+          <Route path="/dca" element={<div className="card"><h2>DCA & Analysis</h2><p>Tools and charts will load here.</p></div>} />
+          <Route path="/sentiment" element={<div className="card"><h2>Fear &amp; Greed</h2><p>Sentiment tiles here.</p></div>} />
           <Route path="*" element={<div className="card"><h2>Not Found</h2></div>} />
         </Routes>
       </main>
-    </div>
+    </>
   );
 }
