@@ -3,7 +3,7 @@ import LineChart from '../components/LineChart.jsx';
 import TradingViewWidget from '../components/TradingViewWidget.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 
-function fmt(n){ return typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString() : '—'; }
+const fmt = (n)=> (Number.isFinite(n) ? n.toLocaleString() : '—');
 
 function sma(arr, n){
   const out = []; let sum=0;
@@ -36,7 +36,6 @@ export default function Dashboard(){
   const [active, setActive] = useState('btc_price');
   const [loading, setLoading] = useState(true);
 
-  // Price history + spot + dominance
   useEffect(()=> {
     (async ()=>{
       try{
@@ -56,7 +55,6 @@ export default function Dashboard(){
     })();
   },[]);
 
-  // Network & mempool
   useEffect(()=>{
     (async ()=>{
       try{
@@ -112,7 +110,7 @@ export default function Dashboard(){
       const ovs = (overlays.grm || []).map(d => ({ data: d }));
       return <LineChart series={priceData} overlays={ovs} />;
     } else if (active === 'pro') {
-      return <TradingViewWidget />;
+      return <TradingViewWidget />; // safe placeholder for now
     } else if (active === 'dom') {
       return (
         <div className="card">
