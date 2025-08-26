@@ -2,17 +2,11 @@ import React from "react";
 import { Routes, Route, NavLink } from "react-router-dom";
 import Dashboard from "./pages/Dashboard.jsx";
 
-function Tab({ to, children }) {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => "tab" + (isActive ? " active" : "")}
-      end
-    >
-      {children}
-    </NavLink>
-  );
-}
+const Tab = ({ to, children }) => (
+  <NavLink to={to} className={({ isActive }) => "tab" + (isActive ? " active" : "")} end>
+    {children}
+  </NavLink>
+);
 
 export default function App() {
   return (
