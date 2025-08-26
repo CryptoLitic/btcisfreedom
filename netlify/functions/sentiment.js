@@ -7,9 +7,7 @@ const FEEDS = [
 ];
 const POS = ['surge','soar','bull','bullish','rally','record','all-time high','ath','inflow','adopt','approval','growth','gain','climb','breakout','positive','increase','pump','accumulate','hodl'];
 const NEG = ['drop','dump','bear','bearish','selloff','down','plunge','crash','fear','ban','lawsuit','hack','exploit','outflow','liquidation','recession','decline','negative','miss'];
-
 function scoreText(t){ if(!t) return 50; const s=t.toLowerCase(); let score=50; POS.forEach(w=>{ if(s.includes(w)) score+=2 }); NEG.forEach(w=>{ if(s.includes(w)) score-=2 }); return Math.max(0, Math.min(100, score)); }
-
 exports.handler = async () => {
   try{
     const parser = new Parser({ timeout: 10000 });

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import Sparkline from '../components/Sparkline.jsx';
 
-function fmt(n) {
-  return typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString() : '—';
-}
+function fmt(n) { return typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString() : '—'; }
 function blocksToNextHalving(height){
   const h = typeof height === 'number' ? height : 0;
   const NEXT = Math.ceil(h / 210000) * 210000;
@@ -12,6 +11,7 @@ function blocksToNextHalving(height){
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [prices, setPrices] = useState([]);
 
   useEffect(()=>{
     (async ()=>{
@@ -19,11 +19,19 @@ export default function Dashboard() {
         const r = await fetch('/api/dashboard');
         const d = await r.json();
         setData(d);
-      }catch{
-        setData(null);
-      }finally{
-        setLoading(false);
-      }
+      }catch{ setData(null); }
+      finally{ setLoading(false); }
+    })();
+  },[]);
+
+  useEffect(()=>{
+    (async ()=>{
+      try{
+        const rr = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30&interval=daily');
+        const jj = await rr.json();
+        const arr = Array.isArray(jj?.prices) ? jj.prices.map(p=>Math.round(p[1])) : [];
+        setPrices(arr);
+      }catch{ setPrices([]); }
     })();
   },[]);
 
@@ -86,6 +94,9 @@ export default function Dashboard() {
               <div className={"v" + (t.trend ? ` trend ${t.trend}` : '')}>{t.v}</div>
             </div>
           ))}
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <Sparkline points={prices} />
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Gauge from '../components/Gauge.jsx';
 
 export default function FearGreed(){
   const [data, setData] = useState(null);
@@ -10,7 +11,7 @@ export default function FearGreed(){
         const r = await fetch('/api/fng');
         const d = await r.json();
         setData(d);
-      }catch{}
+      }catch{ setData(null); }
       setLoading(false);
     })();
   },[]);
@@ -18,16 +19,27 @@ export default function FearGreed(){
   if (loading) return <div className="card"><h2>Loading…</h2></div>;
   if (!data)     return <div className="card"><h2>Error</h2></div>;
 
+  const items = [
+    { k:'Alternative.me', v: data.alt_fng },
+    { k:'Funding score',  v: data.funding_score },
+    { k:'Volatility score', v: data.vol_score },
+    { k:'AI site sentiment', v: data.ai_sentiment },
+    { k:'Median', v: data.median, label: data.label }
+  ];
+
   return (
-    <div className="card">
-      <h2>Fear & Greed</h2>
-      <div className="tiles">
-        <div className="tile"><div className="k">Alternative.me</div><div className="v">{data.alt_fng}</div></div>
-        <div className="tile"><div className="k">Funding Score</div><div className="v">{data.funding_score}</div></div>
-        <div className="tile"><div className="k">30d Volatility Score</div><div className="v">{data.vol_score}</div></div>
-        <div className="tile"><div className="k">AI Site Sentiment</div><div className="v">{data.ai_sentiment}</div></div>
-        <div className="tile"><div className="k">Median</div><div className="v">{data.median}</div></div>
-        <div className="tile"><div className="k">Label</div><div className="v">{data.label}</div></div>
+    <div>
+      <div className="card">
+        <h2>Fear & Greed (composite)</h2>
+        <Gauge score={data.median} />
+        <div className="tiles" style={{ marginTop: 10 }}>
+          {items.map((t,i)=>(
+            <div className="tile" key={i}>
+              <div className="k">{t.k}</div>
+              <div className="v">{t.v}{t.label ? ` — ${t.label}` : ''}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
