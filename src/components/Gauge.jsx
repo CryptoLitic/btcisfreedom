@@ -6,12 +6,17 @@ export default function Gauge({ score = 50, labels = ['Fear','Neutral','Greed'] 
 
   return (
     <div style={{ display: "grid", placeItems: "center" }}>
-      <div style={{ position: "relative", width: 240, height: 120 }}>
-        <svg viewBox="0 0 240 120" width="240" height="120">
+      <div style={{ position: "relative", width: 260, height: 130 }}>
+        <svg viewBox="0 0 240 120" width="260" height="130">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#ff5c5c"/>
+              <stop offset="50%" stopColor="#f7931a"/>
+              <stop offset="100%" stopColor="#17c964"/>
+            </linearGradient>
+          </defs>
           <path d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="#1e293b" strokeWidth="18" />
-          <path d="M20 120 A100 100 0 0 1 120 20" fill="none" stroke="#ff5c5c" strokeWidth="18" />
-          <path d="M120 20 A100 100 0 0 1 170 35" fill="none" stroke="#f7931a" strokeWidth="18" />
-          <path d="M170 35 A100 100 0 0 1 220 120" fill="none" stroke="#25d366" strokeWidth="18" />
+          <path d="M20 120 A100 100 0 0 1 220 120" fill="none" stroke="url(#g1)" strokeWidth="10" />
           <g transform={`translate(120,120) rotate(${angle})`}>
             <line x1="0" y1="0" x2="0" y2="-92" stroke="white" strokeWidth="3" />
             <circle cx="0" cy="0" r="5" fill="white" />

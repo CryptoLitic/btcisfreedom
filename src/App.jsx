@@ -17,8 +17,9 @@ export default function App() {
       <header>
         <div className="container topbar">
           <div className="brand">
-            <img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png?v=035" alt="BTC" />
+            <img src="/assets/btcisfreedom-header.jpg" className="brand-logo" alt="BTC is Freedom logo" />
             <h1>BTC is Freedom</h1>
+            <span className="badge">self-hosted • privacy-first</span>
           </div>
           <button className="btn subtle" onClick={()=>location.reload()}>Refresh</button>
         </div>

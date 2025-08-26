@@ -28,7 +28,6 @@ exports.handler = async () => {
 
     const priceUSD   = price?.market_data?.current_price?.usd ?? 0;
     const change24h  = price?.market_data?.price_change_percentage_24h ?? 0;
-    const volume24   = price?.market_data?.total_volume?.usd ?? 0;
     const dominance  = global?.data?.market_cap_percentage?.btc ?? 0;
 
     const height     = parseInt(heightTxt, 10) || 850000;
@@ -47,9 +46,9 @@ exports.handler = async () => {
     const hashrateEH = isNaN(hashrateGH) ? 500 : hashrateGH/1e9;
 
     const subsidyBTC = blockSubsidyBTC(height);
-    const issuanceDayBTC = Math.round(subsidyBTC * 144);
-    const issuanceYearBTC = Math.round(issuanceDayBTC * 365);
     const pctMined = Math.round((supplyBTC / 21000000) * 1000) / 10;
+    const issuanceDayBTC = Math.round((subsidyBTC * 144));
+    const issuanceYearBTC = Math.round(issuanceDayBTC * 365);
 
     return {
       statusCode: 200,
@@ -57,7 +56,6 @@ exports.handler = async () => {
       body: JSON.stringify({
         price_usd: priceUSD,
         change_24h: change24h,
-        volume_24h_usd: volume24,
         dominance_btc: dominance,
         block_height: height,
         next_halving_height: nextHalving,
@@ -70,7 +68,7 @@ exports.handler = async () => {
         mempool_vmb: (typeof mempool?.vsize === 'number' ? Math.round(mempool.vsize/1e6*10)/10 : (mempool?.vsizeSum ? Math.round(mempool.vsizeSum/1e6*10)/10 : 0)),
         fee_fast: feeFast,
         fee_economy: feeEco,
-        hashrate_eh: hashrateEH,
+        hashrate_eh: isNaN(hashrateEH) ? 0 : hashrateEH,
         supply_btc: supplyBTC,
         pct_mined: pctMined,
         block_subsidy_btc: subsidyBTC,
