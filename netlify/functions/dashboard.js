@@ -5,12 +5,20 @@ function halvingETA(height){
   const minutes = blocksRemaining * 10;
   const days = Math.floor(minutes / (60*24));
   const hours = Math.floor((minutes - days*60*24) / 60);
-  return `${days}d ${hours}h`;
+  return { text: `${days}d ${hours}h`, nextHalving: NEXT_HALVING, blocksRemaining };
+}
+
+function blockSubsidyBTC(height){
+  const epoch = Math.floor(height / 210000);
+  const subsidy = 50 / Math.pow(2, epoch); // BTC per block
+  return Math.max(subsidy, 0);
 }
 
 exports.handler = async () => {
   try{
-    const [price, global, heightTxt, mempool, fees, diff, supplyTxt, hashrateTxt] = await Promise.all([
+    const [
+      price, global, heightTxt, mempool, fees, diff, supplyTxt, hashrateTxt
+    ] = await Promise.all([
       fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false').then(r=>r.json()).catch(_=>null),
       fetch('https://api.coingecko.com/api/v3/global').then(r=>r.json()).catch(_=>null),
       fetch('https://mempool.space/api/blocks/tip/height').then(r=>r.text()).catch(_=>null),
@@ -25,34 +33,59 @@ exports.handler = async () => {
     const change24h  = price?.market_data?.price_change_percentage_24h ?? 0;
     const volume24   = price?.market_data?.total_volume?.usd ?? 0;
     const dominance  = global?.data?.market_cap_percentage?.btc ?? 0;
-    const h          = parseInt(heightTxt, 10) || 850000;
+
+    const height     = parseInt(heightTxt, 10) || 850000;
+    const { text: halving_text, nextHalving, blocksRemaining: blocks_to_halving } = halvingETA(height);
+
     const feeFast    = fees?.fastestFee ?? 15;
     const feeEco     = fees?.economyFee ?? 3;
+
     const diffProg   = diff?.progressPercent ? Math.round(diff.progressPercent*100)/100 : 50;
-    const supplyBTC  = supplyTxt ? Math.round(parseInt(supplyTxt,10)/1e8) : 19700000;
-    const memCount   = mempool?.count ?? 0;
-    const memVBytes  = mempool?.vsize ?? mempool?.vsizeSum ?? 0;
-    const memVMB     = typeof memVBytes === 'number' ? Math.round(memVBytes/1e6*10)/10 : 0;
+    const remaining  = typeof diff?.remainingBlocks === 'number' ? diff.remainingBlocks : 1000; // fallback
+    const sinceDiff  = 2016 - remaining;
+
+    const supplySats = supplyTxt ? parseInt(supplyTxt,10) : 19_700_000*1e8;
+    const supplyBTC  = Math.round(supplySats/1e8);
     const hashrateGH = hashrateTxt ? parseFloat(hashrateTxt) : NaN;
     const hashrateEH = isNaN(hashrateGH) ? 500 : hashrateGH/1e9;
+
+    const subsidyBTC = blockSubsidyBTC(height);
+    const issuanceDayBTC = Math.round(subsidyBTC * 144);
+    const issuanceYearBTC = Math.round(issuanceDayBTC * 365);
+    const pctMined = Math.round((supplyBTC / 21000000) * 1000) / 10; // one decimal
 
     return {
       statusCode: 200,
       headers: { 'Cache-Control': 'public, max-age=120' },
       body: JSON.stringify({
+        // Market
         price_usd: priceUSD,
         change_24h: change24h,
         volume_24h_usd: volume24,
         dominance_btc: dominance,
-        block_height: h,
-        halving_eta: halvingETA(h),
-        mempool_count: memCount,
-        mempool_vmb: memVMB,
+
+        // Chain
+        block_height: height,
+        next_halving_height: nextHalving,
+        halving_eta: halving_text,
+        blocks_to_halving,
+
+        // Difficulty / mempool / fees
+        diff_progress: diffProg,
+        diff_blocks_since: sinceDiff,
+        diff_blocks_remaining: remaining,
+        mempool_count: mempool?.count ?? 0,
+        mempool_vmb: (typeof mempool?.vsize === 'number' ? Math.round(mempool.vsize/1e6*10)/10 : (mempool?.vsizeSum ? Math.round(mempool.vsizeSum/1e6*10)/10 : 0)),
         fee_fast: feeFast,
         fee_economy: feeEco,
-        diff_progress: diffProg,
+
+        // Security / supply
+        hashrate_eh: hashrateEH,
         supply_btc: supplyBTC,
-        hashrate_eh: hashrateEH
+        pct_mined: pctMined,
+        block_subsidy_btc: subsidyBTC,
+        issuance_day_btc: issuanceDayBTC,
+        issuance_year_btc: issuanceYearBTC
       })
     };
   }catch{
