@@ -50,14 +50,14 @@ export default function Dashboard() {
   ];
 
   const tilesNetwork = [
-    { k: 'Block Height',           v: fmt(data.block_height) },
-    { k: 'Next Halving Height',    v: fmt(data.next_halving_height) },
-    { k: 'Blocks to Halving',      v: fmt(blocksRemaining) },
-    { k: 'Halving ETA',            v: data.halving_eta || '—' },
-    { k: 'Hashrate',               v: typeof data.hashrate_eh === 'number' ? `${data.hashrate_eh.toFixed(2)} EH/s` : '—' },
-    { k: 'Difficulty Progress',    v: typeof data.diff_progress === 'number' ? `${data.diff_progress}%` : '—' },
-    { k: 'Blocks Since Diff Adj',  v: fmt(data.diff_blocks_since) },
-    { k: 'Blocks to Next Diff Adj',v: fmt(data.diff_blocks_remaining) },
+    { k: 'Block Height',            v: fmt(data.block_height) },
+    { k: 'Next Halving Height',     v: fmt(data.next_halving_height) },
+    { k: 'Blocks to Halving',       v: fmt(blocksRemaining) },
+    { k: 'Halving ETA',             v: data.halving_eta || '—' },
+    { k: 'Hashrate',                v: typeof data.hashrate_eh === 'number' ? `${data.hashrate_eh.toFixed(2)} EH/s` : '—' },
+    { k: 'Difficulty Progress',     v: typeof data.diff_progress === 'number' ? `${data.diff_progress}%` : '—' },
+    { k: 'Blocks Since Diff Adj',   v: fmt(data.diff_blocks_since) },
+    { k: 'Blocks to Next Diff Adj', v: fmt(data.diff_blocks_remaining) },
   ];
 
   const tilesSupply = [
