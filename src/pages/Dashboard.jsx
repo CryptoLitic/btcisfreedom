@@ -1,125 +1,167 @@
-import React, { useEffect, useState } from 'react';
-import PriceChart from '../components/PriceChart.jsx';
+import React, { useEffect, useMemo, useState } from 'react';
+import LineChart from '../components/LineChart.jsx';
 import TradingViewWidget from '../components/TradingViewWidget.jsx';
 import ProgressBar from '../components/ProgressBar.jsx';
 
 function fmt(n) { return typeof n === 'number' && Number.isFinite(n) ? n.toLocaleString() : '—'; }
+
+function sma(arr, n){
+  const out = []; let sum=0;
+  for(let i=0;i<arr.length;i++){
+    sum += arr[i].value;
+    if(i>=n) sum -= arr[i-n].value;
+    if(i>=n-1) out.push({ time: arr[i].time, value: sum/n });
+  }
+  return out;
+}
+function piCycle(price){
+  const ma111 = sma(price, 111);
+  const ma350 = sma(price, 350).map(p=>({ time:p.time, value:p.value*2 }));
+  return { ma111, ma350x2: ma350 };
+}
+function goldenRatioBands(price){
+  const ma350 = sma(price, 350);
+  const fibs = [1.6, 2, 3, 5];
+  return fibs.map((f)=> ma350.map(p=>({ time:p.time, value: p.value * f })));
+}
 function blocksToNextHalving(height){
-  const h = typeof height === 'number' ? height : 0;
-  const NEXT = Math.ceil(h / 210000) * 210000;
-  return Math.max(0, NEXT - h);
+  const NEXT = Math.ceil(height / 210000) * 210000;
+  return Math.max(0, NEXT - (height||0));
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState(null);
+  const [priceData, setPriceData] = useState([]);      // [{time, value}]
+  const [spot, setSpot] = useState({ price: 0, change24: 0 });
+  const [network, setNetwork] = useState({ height: 0, mempoolCount: 0, vmb: 0, diffProgress: 50 });
+  const [active, setActive] = useState('btc_price');
   const [loading, setLoading] = useState(true);
-  const [series, setSeries] = useState([]);
-  const [liveIssuance, setLiveIssuance] = useState(0);
 
-  useEffect(()=>{
-    (async ()=>{
-      try{
-        const r = await fetch('/api/dashboard');
-        const d = await r.json();
-        setData(d);
-        const rate = (d.block_subsidy_btc || 3.125) / 600;
-        let x = 0;
-        const id = setInterval(()=>{ x += rate; setLiveIssuance(x); }, 1000);
-        return ()=>clearInterval(id);
-      }catch{ setData(null); }
-      finally{ setLoading(false); }
+  // Price history & spot from CoinGecko
+  useEffect(() => {
+    (async () => {
+      try {
+        const [hist, spotResp] = await Promise.all([
+          fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1825&interval=daily').then(r=>r.json()),
+          fetch('https://api.coingecko.com/api/v3/coins/bitcoin?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false').then(r=>r.json()),
+        ]);
+        const arr = Array.isArray(hist?.prices) ? hist.prices.map(p => ({ time: Math.floor(p[0]/1000), value: p[1] })) : [];
+        setPriceData(arr);
+        setSpot({
+          price: spotResp?.market_data?.current_price?.usd ?? 0,
+          change24: spotResp?.market_data?.price_change_percentage_24h ?? 0
+        });
+      } catch (e) {}
     })();
-  },[]);
+  }, []);
 
-  useEffect(()=>{
-    (async ()=>{
-      try{
-        const rr = await fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=60&interval=daily');
-        const jj = await rr.json();
-        const arr = Array.isArray(jj?.prices) ? jj.prices.map(p=>({ time: Math.floor(p[0]/1000), value: Math.round(p[1]) })) : [];
-        setSeries(arr);
-      }catch{ setSeries([]); }
+  // Mempool + height + diff
+  useEffect(() => {
+    (async () => {
+      try {
+        const [heightTxt, mempool, diff] = await Promise.all([
+          fetch('https://mempool.space/api/blocks/tip/height').then(r=>r.text()),
+          fetch('https://mempool.space/api/mempool').then(r=>r.json()),
+          fetch('https://mempool.space/api/v1/difficulty-adjustment').then(r=>r.json())
+        ]);
+        const height = parseInt(heightTxt,10) || 0;
+        const vmb = typeof mempool?.vsize === 'number' ? Math.round(mempool.vsize/1e6*10)/10
+                : (mempool?.vsizeSum ? Math.round(mempool.vsizeSum/1e6*10)/10 : 0);
+        setNetwork({
+          height,
+          mempoolCount: mempool?.count ?? 0,
+          vmb,
+          diffProgress: diff?.progressPercent ? Math.round(diff.progressPercent*100)/100 : 50
+        });
+      } catch (e) {}
+      setLoading(false);
     })();
-  },[]);
+  }, []);
 
-  if (loading) return <div className="card"><h2>Loading…</h2><p className="muted">Fetching BTC price, fees, mempool, blocks…</p></div>;
-  if (!data)     return <div className="card"><h2>Error</h2><p className="muted">Could not load dashboard data.</p></div>;
+  const overlays = useMemo(() => {
+    if (!priceData.length) return {};
+    const ma50  = sma(priceData, 50);
+    const ma200 = sma(priceData, 200);
+    const mayer = priceData.slice(199).map((p, i) => ({ time: p.time, value: p.value / ma200[i].value }));
+    const pc = piCycle(priceData);
+    const grm = goldenRatioBands(priceData);
+    return { ma50, ma200, mayer, ma111: pc.ma111, ma350x2: pc.ma350x2, grm };
+  }, [priceData]);
 
-  const price  = Number(data.price_usd || 0);
-  const supply = Number(data.supply_btc || 0);
-  const satsPerUsd = price ? Math.floor(100_000_000 / price).toLocaleString() : '—';
-  const satsPer10  = price ? (Math.floor(100_000_000 / price) * 10).toLocaleString() : '—';
-  const satsPer100 = price ? (Math.floor(100_000_000 / price) * 100).toLocaleString() : '—';
-  const usdPerSat  = price ? (price / 100_000_000).toFixed(6) : '—';
-  const blocksRemaining = typeof data.blocks_to_halving === 'number'
-    ? data.blocks_to_halving
-    : blocksToNextHalving(data.block_height || 0);
-  const change24 = Number(data.change_24h || 0);
-  const diffProgress = typeof data.diff_progress === 'number' ? data.diff_progress : 0;
-  const mempoolFill = Math.max(0, Math.min(100, Math.round(((data.mempool_vmb || 0) / 300) * 100)));
+  const LEFT_MENU = [
+    {id:'btc_price', label:'BTC Price (MA50/200)'},
+    {id:'mayer', label:'Mayer Multiple'},
+    {id:'pi', label:'Pi Cycle (111D & 350D×2)'},
+    {id:'grm', label:'Golden Ratio Multiplier'},
+    {id:'pro', label:'Pro Chart (TradingView)'}
+  ];
+
+  const blocksRemaining = blocksToNextHalving(network.height);
+  const mempoolFill = Math.max(0, Math.min(100, Math.round((network.vmb / 300) * 100)));
+
+  const mainChart = (() => {
+    if (active === 'btc_price') {
+      return <LineChart series={priceData} overlays={[{data:overlays.ma50},{data:overlays.ma200}]} />;
+    } else if (active === 'mayer') {
+      return <LineChart series={overlays.mayer || []} overlays={[]} colors={{price:'#93c5fd'}} />;
+    } else if (active === 'pi') {
+      return <LineChart series={priceData} overlays={[{data:overlays.ma111},{data:overlays.ma350x2}]} />;
+    } else if (active === 'grm') {
+      const ovs = (overlays.grm || []).map(d => ({ data: d }));
+      return <LineChart series={priceData} overlays={ovs} />;
+    } else if (active === 'pro') {
+      return <TradingViewWidget />;
+    }
+    return null;
+  })();
+
+  if (loading) return <div className="card"><h2>Loading…</h2></div>;
 
   return (
-    <div>
-      <div className="card hero">
-        <div>
-          <div className="label">BTC is Freedom</div>
-          <div className="price">${price ? price.toLocaleString() : '—'}</div>
-          <div className="sub">
-            1 sat = ${usdPerSat} • {satsPerUsd} sats/$ • 24h {change24.toFixed(2)}%
-          </div>
-          <div className="pills" style={{marginTop:10}}>
-            <div className="pill">Height: {fmt(data.block_height)}</div>
-            <div className="pill">Blocks → Halving: {fmt(blocksRemaining)}</div>
-            <div className="pill">Halving ETA: {data.halving_eta || '—'}</div>
-          </div>
+    <div className="layout">
+      <aside className="sidebar">
+        <h3>Analytics</h3>
+        <div className="menu">
+          {LEFT_MENU.map(x => (
+            <button
+              key={x.id}
+              onClick={() => setActive(x.id)}
+              className={active===x.id ? 'active' : ''}
+            >
+              {x.label}
+            </button>
+          ))}
         </div>
-        <div style={{flex:1, minWidth:280}}>
-          <PriceChart series={series} />
-        </div>
-      </div>
+      </aside>
 
-      <div className="card">
-        <h2>Pro Chart</h2>
-        <TradingViewWidget symbol="COINBASE:BTCUSD" />
-      </div>
-
-      <div className="row">
-        <div className="card">
-          <h2>Network & Fees</h2>
-          <div className="tiles">
-            <div className="tile"><div className="k">Mempool TXs</div><div className="v">{fmt(data.mempool_count)}</div></div>
-            <div className="tile"><div className="k">Backlog Size</div><div className="v">{typeof data.mempool_vmb === 'number' ? `${data.mempool_vmb.toFixed(1)} vMB` : '—'}</div></div>
-            <div className="tile"><div className="k">Fast Fee</div><div className="v">{typeof data.fee_fast === 'number' ? `${data.fee_fast} sat/vB` : '—'}</div></div>
-            <div className="tile"><div className="k">Economy Fee</div><div className="v">{typeof data.fee_economy === 'number' ? `${data.fee_economy} sat/vB` : '—'}</div></div>
-            <div className="tile"><div className="k">Hashrate</div><div className="v">{typeof data.hashrate_eh === 'number' ? `${data.hashrate_eh.toFixed(2)} EH/s` : '—'}</div></div>
-            <div className="tile"><div className="k">Dominance</div><div className="v">{typeof data.dominance_btc === 'number' ? `${data.dominance_btc.toFixed(1)}%` : '—'}</div></div>
+      <section>
+        <div className="card hero">
+          <div>
+            <div className="label">BTC is Freedom</div>
+            <div className="price">${spot.price ? spot.price.toLocaleString() : '—'}</div>
+            <div className="sub">
+              24h {Number(spot.change24||0).toFixed(2)}% • Height {fmt(network.height)} • Blocks→Halving {fmt(blocksRemaining)}
+            </div>
           </div>
-          <div style={{marginTop:12}}>
-            <div className="label">Difficulty epoch progress</div>
-            <ProgressBar value={diffProgress} />
-          </div>
-          <div style={{marginTop:12}}>
-            <div className="label">Mempool fill (scaled)</div>
-            <ProgressBar value={mempoolFill} />
+          <div className="tiles" style={{minWidth:280}}>
+            <div className="tile"><div className="k">Mempool TXs</div><div className="v">{fmt(network.mempoolCount)}</div></div>
+            <div className="tile"><div className="k">Mempool vMB</div><div className="v">{fmt(network.vmb)}</div></div>
+            <div className="tile"><div className="k">Diff. Progress</div><div className="v">{fmt(network.diffProgress)}%</div></div>
           </div>
         </div>
 
         <div className="card">
-          <h2>Supply & Issuance</h2>
-          <div className="tiles">
-            <div className="tile"><div className="k">BTC Supply</div><div className="v">{supply ? supply.toLocaleString() + ' BTC' : '—'}</div></div>
-            <div className="tile"><div className="k">% Mined</div><div className="v">{typeof data.pct_mined === 'number' ? `${data.pct_mined}%` : '—'}</div></div>
-            <div className="tile"><div className="k">Block Subsidy</div><div className="v">{typeof data.block_subsidy_btc === 'number' ? `${data.block_subsidy_btc.toFixed(3)} BTC` : '—'}</div></div>
-            <div className="tile"><div className="k">Issuance / day</div><div className="v">{typeof data.issuance_day_btc === 'number' ? `${data.issuance_day_btc.toLocaleString()} BTC` : '—'}</div></div>
-            <div className="tile"><div className="k">Issuance / year</div><div className="v">{typeof data.issuance_year_btc === 'number' ? `${data.issuance_year_btc.toLocaleString()} BTC` : '—'}</div></div>
-            <div className="tile"><div className="k">Live Issuance (approx)</div><div className="v">{liveIssuance.toFixed(6)} BTC</div></div>
-          </div>
-          <div className="tiles" style={{marginTop:8}}>
-            <div className="tile"><div className="k">Sats per $10</div><div className="v">{satsPer10}</div></div>
-            <div className="tile"><div className="k">Sats per $100</div><div className="v">{satsPer100}</div></div>
-          </div>
+          <h2>Charts</h2>
+          {mainChart}
         </div>
-      </div>
+
+        <div className="card">
+          <h2>Difficulty & Mempool</h2>
+          <div className="label">Difficulty epoch progress</div>
+          <ProgressBar value={network.diffProgress || 50} />
+          <div className="label" style={{marginTop:12}}>Mempool fill (scaled)</div>
+          <ProgressBar value={mempoolFill} />
+        </div>
+      </section>
     </div>
   );
 }
