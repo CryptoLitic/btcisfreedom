@@ -24,21 +24,26 @@ export default function News(){
       <div className="card">
         <h2>Past 24 hours — 5 key moves</h2>
         {!top5.length && <p className="muted">No summary yet.</p>}
-        <ul>
+        <div className="tiles">
           {top5.map((n,i)=>(
-            <li key={i} style={{marginBottom:8}}>
-              <a href={n.url} target="_blank" rel="noreferrer">{n.title}</a>
-              <div className="muted" style={{fontSize:12}}>{n.explainer}</div>
-            </li>
+            <a key={i} className="tile" href={n.url} target="_blank" rel="noreferrer">
+              <div className="k">{n.source || 'News'}</div>
+              <div className="v" style={{fontSize:16, lineHeight:1.25}}>{n.title}</div>
+              <div className="k" style={{marginTop:6}}>{n.explainer}</div>
+            </a>
           ))}
-        </ul>
+        </div>
       </div>
+
       <div className="card">
         <h3>All headlines (24h)</h3>
         {!items.length && <p className="muted">No items.</p>}
         <ul>
           {items.map((n,i)=>(
-            <li key={i}><a href={n.url} target="_blank" rel="noreferrer">{n.title}</a> <span className="muted">— {n.source}</span></li>
+            <li key={i} style={{marginBottom:6}}>
+              <a href={n.url} target="_blank" rel="noreferrer">{n.title}</a>
+              <span className="muted"> — {n.source}</span>
+            </li>
           ))}
         </ul>
       </div>
